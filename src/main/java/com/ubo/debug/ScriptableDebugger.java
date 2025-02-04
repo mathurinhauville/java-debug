@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.Map;
+import java.util.Scanner;
 
 public class ScriptableDebugger {
 
@@ -87,6 +88,8 @@ public class ScriptableDebugger {
         }
     }
 
+
+
     public void startDebugger() throws VMDisconnectedException, InterruptedException, AbsentInformationException {
         EventSet eventSet;
         while ((eventSet = vm.eventQueue().remove()) != null) {
@@ -119,5 +122,123 @@ public class ScriptableDebugger {
                 vm.resume();
             }
         }
+    }
+
+    public ScriptableDebugger(VirtualMachine vm) {
+        this.vm = vm;
+    }
+
+    public void step() throws AbsentInformationException {
+        ThreadReference thread = vm.allThreads().get(0);
+        StepRequest stepRequest = vm.eventRequestManager().createStepRequest(
+                thread, StepRequest.STEP_MIN, StepRequest.STEP_INTO);
+        stepRequest.enable();
+        vm.resume();
+    }
+
+    public void stepOver() throws AbsentInformationException {
+        ThreadReference thread = vm.allThreads().get(0);
+        StepRequest stepRequest = vm.eventRequestManager().createStepRequest(
+                thread, StepRequest.STEP_LINE, StepRequest.STEP_OVER);
+        stepRequest.enable();
+        vm.resume();
+    }
+
+    public void continueExecution() {
+        vm.resume();
+    }
+
+    public void printCurrentFrame() throws IncompatibleThreadStateException {
+        ThreadReference thread = vm.allThreads().get(0);
+        System.out.println(thread.frame(0));
+    }
+
+    public void printTemporaries() throws IncompatibleThreadStateException, AbsentInformationException {
+        ThreadReference thread = vm.allThreads().get(0);
+        StackFrame frame = thread.frame(0);
+        for (LocalVariable var : frame.visibleVariables()) {
+            System.out.println(var.name() + " -> " + frame.getValue(var));
+        }
+    }
+
+    public void printStack() throws IncompatibleThreadStateException {
+        ThreadReference thread = vm.allThreads().get(0);
+        for (StackFrame frame : thread.frames()) {
+            System.out.println(frame);
+        }
+    }
+
+    public void printReceiver() throws IncompatibleThreadStateException {
+        ThreadReference thread = vm.allThreads().get(0);
+        System.out.println(thread.frame(0).thisObject());
+    }
+
+    public void printSender() {
+        System.out.println("Not directly available in JDI");
+    }
+
+    public void printReceiverVariables() throws IncompatibleThreadStateException {
+        ObjectReference receiver = vm.allThreads().get(0).frame(0).thisObject();
+        for (Field field : receiver.referenceType().allFields()) {
+            System.out.println(field.name() + " -> " + receiver.getValue(field));
+        }
+    }
+
+    public void printMethod() throws IncompatibleThreadStateException {
+        System.out.println(vm.allThreads().get(0).frame(0).location().method());
+    }
+
+    public void printArguments() throws IncompatibleThreadStateException, AbsentInformationException {
+        StackFrame frame = vm.allThreads().get(0).frame(0);
+        for (LocalVariable var : frame.visibleVariables()) {
+            if (var.isArgument()) {
+                System.out.println(var.name() + " -> " + frame.getValue(var));
+            }
+        }
+    }
+
+    public void printVariable(String varName) throws IncompatibleThreadStateException, AbsentInformationException {
+        StackFrame frame = vm.allThreads().get(0).frame(0);
+        LocalVariable var = frame.visibleVariableByName(varName);
+        System.out.println(var.name() + " -> " + frame.getValue(var));
+    }
+
+    public void setBreakpoint() throws AbsentInformationException {
+        System.out.print("Enter class name: ");
+        Scanner scanner = new Scanner(System.in);
+        String className = scanner.nextLine().trim();
+        System.out.print("Enter line number: ");
+        int lineNumber = scanner.nextInt();
+        for (ReferenceType targetClass : vm.allClasses()) {
+            if (targetClass.name().equals(className)) {
+                Location location = targetClass.locationsOfLine(lineNumber).get(0);
+                BreakpointRequest bpReq = vm.eventRequestManager().createBreakpointRequest(location);
+                bpReq.enable();
+            }
+        }
+    }
+
+    public void listBreakpoints() {
+        System.out.println("Breakpoints are not directly retrievable in JDI");
+    }
+
+    public void setOneTimeBreakpoint() throws AbsentInformationException {
+        setBreakpoint();
+        // Logique supplémentaire pour supprimer après une activation
+    }
+
+    public void setConditionalBreakpoint() throws AbsentInformationException {
+        setBreakpoint();
+        System.out.print("Enter hit count before activation: ");
+        Scanner scanner = new Scanner(System.in);
+        int count = scanner.nextInt();
+        // Logique supplémentaire pour l'activer après un certain nombre d'atteintes
+    }
+
+    public void setMethodCallBreakpoint() {
+        System.out.print("Enter method name: ");
+        Scanner scanner = new Scanner(System.in);
+        String methodName = scanner.nextLine().trim();
+        System.out.println("Not natively supported by JDI");
     }
 }
