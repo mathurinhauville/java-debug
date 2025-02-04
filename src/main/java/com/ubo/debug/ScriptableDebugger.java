@@ -10,6 +10,7 @@ import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.StepRequest;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -19,13 +20,13 @@ public class ScriptableDebugger {
 
     private Class debugClass;
     private VirtualMachine vm;
+    private boolean autoStepping = false;
 
     public VirtualMachine connectAndLaunchVM() throws IOException, IllegalConnectorArgumentsException, VMStartException {
         LaunchingConnector launchingConnector = Bootstrap.virtualMachineManager().defaultConnector();
         Map<String, Connector.Argument> arguments = launchingConnector.defaultArguments();
         arguments.get("main").setValue(debugClass.getName());
-        VirtualMachine vm = launchingConnector.launch(arguments);
-        return vm;
+        return launchingConnector.launch(arguments);
     }
 
     public void attachTo(Class debuggeeClass) {
@@ -34,11 +35,7 @@ public class ScriptableDebugger {
             vm = connectAndLaunchVM();
             enableClassPrepareRequest(vm);
             startDebugger();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (IllegalConnectorArgumentsException e) {
-            e.printStackTrace();
-        } catch (VMStartException e) {
+        } catch (IOException | IllegalConnectorArgumentsException | VMStartException e) {
             e.printStackTrace();
             System.out.println(e.toString());
         } catch (VMDisconnectedException e) {
@@ -65,13 +62,33 @@ public class ScriptableDebugger {
     }
 
     public void enableStepRequest(LocatableEvent event) {
+        // Supprime les StepRequest existants pour ce thread
+        vm.eventRequestManager().deleteEventRequests(vm.eventRequestManager().stepRequests());
+
         StepRequest stepRequest = vm.eventRequestManager()
                 .createStepRequest(event.thread(), StepRequest.STEP_MIN, StepRequest.STEP_OVER);
         stepRequest.enable();
     }
 
+    private void waitForUserInput(LocatableEvent event) {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("Debugger paused. Type 'step' to continue stepping, or press Enter to auto-step until the end.");
+        try {
+            String input = reader.readLine();
+            if ("step".equalsIgnoreCase(input)) {
+                autoStepping = false;
+                enableStepRequest(event);
+            } else {
+                autoStepping = true;
+                enableStepRequest(event);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void startDebugger() throws VMDisconnectedException, InterruptedException, AbsentInformationException {
-        EventSet eventSet = null;
+        EventSet eventSet;
         while ((eventSet = vm.eventQueue().remove()) != null) {
             for (Event event : eventSet) {
                 System.out.println(event.toString());
@@ -80,8 +97,12 @@ public class ScriptableDebugger {
                     setBreakPoint(debugClass.getName(), 6);
                 }
 
-                if (event instanceof BreakpointEvent) {
-                    enableStepRequest((BreakpointEvent) event);
+                if (event instanceof BreakpointEvent || event instanceof StepEvent) {
+                    if (!autoStepping) {
+                        waitForUserInput((LocatableEvent) event);
+                    } else {
+                        enableStepRequest((LocatableEvent) event);
+                    }
                 }
 
                 if (event instanceof VMDisconnectEvent) {
@@ -99,5 +120,4 @@ public class ScriptableDebugger {
             }
         }
     }
-
 }
