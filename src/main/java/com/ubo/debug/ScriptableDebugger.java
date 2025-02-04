@@ -8,6 +8,8 @@ import com.sun.jdi.connect.VMStartException;
 import com.sun.jdi.event.*;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.Map;
 
 public class ScriptableDebugger {
@@ -28,6 +30,7 @@ public class ScriptableDebugger {
         this.debugClass = debuggeeClass;
         try {
             vm = connectAndLaunchVM();
+            enableClassPrepareRequest(vm);
             startDebugger();
 
         } catch (IOException e) {
@@ -44,15 +47,25 @@ public class ScriptableDebugger {
         }
     }
 
+    private void enableClassPrepareRequest(VirtualMachine vm) {
+    }
+
     public void startDebugger() throws VMDisconnectedException, InterruptedException {
         EventSet eventSet = null;
         while ((eventSet = vm.eventQueue().remove()) != null) {
             for (Event event : eventSet) {
-                if (event instanceof VMDisconnectEvent) {
-                    System.out.println("===End o f program.");
-                    return;
-                }
                 System.out.println(event.toString());
+                if (event instanceof VMDisconnectEvent) {
+                    System.out.println("End of program");
+                    InputStreamReader reader = new InputStreamReader(vm.process().getInputStream());
+                    OutputStreamWriter writer = new OutputStreamWriter(System.out);
+                    try {
+                        reader.transferTo(writer);
+                        writer.flush();
+                    } catch (IOException e) {
+                        System.out.println("Target VM input stream reading error.");
+                    }
+                }
                 vm.resume();
             }
         }
