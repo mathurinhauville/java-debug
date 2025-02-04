@@ -22,6 +22,7 @@ public class ScriptableDebugger {
         VirtualMachine vm = launchingConnector.launch(arguments);
         return vm;
     }
+
     public void attachTo(Class debuggeeClass) {
 
         this.debugClass = debuggeeClass;
@@ -38,8 +39,7 @@ public class ScriptableDebugger {
             System.out.println(e.toString());
         } catch (VMDisconnectedException e) {
             System.out.println("Virtual Machine is disconnected: " + e.toString());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -48,6 +48,10 @@ public class ScriptableDebugger {
         EventSet eventSet = null;
         while ((eventSet = vm.eventQueue().remove()) != null) {
             for (Event event : eventSet) {
+                if (event instanceof VMDisconnectEvent) {
+                    System.out.println("===End o f program.");
+                    return;
+                }
                 System.out.println(event.toString());
                 vm.resume();
             }
