@@ -100,4 +100,21 @@ public class BreakpointManager {
         }
     }
 
+    public void setBreakpointOnce(String className, int lineNumber) throws AbsentInformationException {
+        for (BreakpointRequest bpReq : breakpoints) {
+            Location location = bpReq.location();
+            if (location.declaringType().name().equals(className) && location.lineNumber() == lineNumber) {
+                System.out.println("Breakpoint already set at " + className + ":" + lineNumber);
+                return;
+            }
+        }
+        for (ReferenceType targetClass : vm.allClasses()) {
+            if (targetClass.name().equals(className)) {
+                Location location = targetClass.locationsOfLine(lineNumber).get(0);
+                BreakpointRequest bpReq = vm.eventRequestManager().createBreakpointRequest(location);
+                bpReq.enable();
+                breakpoints.add(bpReq);
+            }
+        }
+    }
 }
