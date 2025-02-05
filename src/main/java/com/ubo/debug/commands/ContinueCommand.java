@@ -1,13 +1,8 @@
 package com.ubo.debug.commands;
 
-import com.sun.jdi.AbsentInformationException;
-import com.sun.jdi.IncompatibleThreadStateException;
 import com.sun.jdi.VMDisconnectedException;
 import com.sun.jdi.VirtualMachine;
-import com.sun.jdi.event.BreakpointEvent;
-import com.sun.jdi.event.Event;
-import com.sun.jdi.event.EventSet;
-import com.sun.jdi.event.LocatableEvent;
+import com.sun.jdi.event.*;
 import com.ubo.debug.ScriptableDebugger;
 
 public class ContinueCommand implements DebuggerCommand {
@@ -15,25 +10,25 @@ public class ContinueCommand implements DebuggerCommand {
         VirtualMachine vm = debugger.getVm();
 
         try {
-            vm.resume();
-            EventSet eventSet;
-            while ((eventSet = vm.eventQueue().remove()) != null) {
+            vm.resume(); // Relancer l'exécution après un arrêt
+
+            while (true) {
+                EventSet eventSet = vm.eventQueue().remove();
                 for (Event event : eventSet) {
                     if (event instanceof BreakpointEvent) {
-                        debugger.waitForUserInput((LocatableEvent) event);
+                        return; // On s'arrête uniquement quand un breakpoint est atteint
+                    } else if (event instanceof VMDisconnectEvent) {
+                        System.out.println("Virtual Machine disconnected.");
                         return;
                     }
-                    vm.resume();
+                    // Ignorer les StepEvent et autres événements non pertinents
                 }
+                vm.resume(); // Ne reprendre l'exécution que si aucun BreakpointEvent n'a été capté
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (VMDisconnectedException e) {
-            System.out.println("Virtual Machine is disconnected: " + e);
-        } catch (AbsentInformationException e) {
-            throw new RuntimeException(e);
-        } catch (IncompatibleThreadStateException e) {
-            throw new RuntimeException(e);
+            System.out.println("Virtual Machine is disconnected: " + e.toString());
         }
     }
 }
