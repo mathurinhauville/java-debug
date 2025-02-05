@@ -97,7 +97,7 @@ public class ScriptableDebugger {
                 System.out.println(event.toString());
 
                 if (event instanceof ClassPrepareEvent) {
-                    breakpointManager.setBreakpoint(debugClass.getName(), 6);
+//                    breakpointManager.setBreakpoint(debugClass.getName(), 6);
                     breakpointManager.loadBreakpointsFromFile();
                 }
 

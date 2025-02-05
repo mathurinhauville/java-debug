@@ -11,6 +11,10 @@ public class StepCommand implements DebuggerCommand {
         VirtualMachine vm = debugger.getVm();
         ThreadReference thread = vm.allThreads().getFirst();
 
+        if (!thread.isSuspended()) {
+            thread.suspend();
+        }
+
         vm.eventRequestManager().deleteEventRequests(vm.eventRequestManager().stepRequests());
         StepRequest stepRequest = vm.eventRequestManager().createStepRequest(
                 thread, StepRequest.STEP_MIN, StepRequest.STEP_INTO);

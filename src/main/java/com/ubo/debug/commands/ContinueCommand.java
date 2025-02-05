@@ -1,34 +1,41 @@
 package com.ubo.debug.commands;
 
-import com.sun.jdi.VMDisconnectedException;
-import com.sun.jdi.VirtualMachine;
+import com.sun.jdi.*;
 import com.sun.jdi.event.*;
 import com.ubo.debug.ScriptableDebugger;
 
 public class ContinueCommand implements DebuggerCommand {
     public void execute(ScriptableDebugger debugger) {
         VirtualMachine vm = debugger.getVm();
+        ThreadReference thread = vm.allThreads().get(0);
+        StepCommand stepCommand = new StepCommand();
 
         try {
-            vm.resume(); // Relancer l'exécution après un arrêt
-
             while (true) {
+                if (!thread.isSuspended()) {
+                    thread.suspend();
+                }
+
+                stepCommand.execute(debugger);
+
                 EventSet eventSet = vm.eventQueue().remove();
                 for (Event event : eventSet) {
                     if (event instanceof BreakpointEvent) {
-                        return; // On s'arrête uniquement quand un breakpoint est atteint
-                    } else if (event instanceof VMDisconnectEvent) {
+                        System.out.println("Breakpoint hit at " + ((BreakpointEvent) event).location());
+                        return; // Stop when a breakpoint is hit
+                    }
+                    if (event instanceof VMDisconnectEvent) {
                         System.out.println("Virtual Machine disconnected.");
                         return;
                     }
-                    // Ignorer les StepEvent et autres événements non pertinents
                 }
-                vm.resume(); // Ne reprendre l'exécution que si aucun BreakpointEvent n'a été capté
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (VMDisconnectedException e) {
             System.out.println("Virtual Machine is disconnected: " + e.toString());
+        } catch (AbsentInformationException e) {
+            throw new RuntimeException(e);
         }
     }
 }
