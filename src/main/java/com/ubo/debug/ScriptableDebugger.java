@@ -17,11 +17,17 @@ public class ScriptableDebugger {
 
     private Class<?> debugClass;
     private VirtualMachine vm;
-    private List<BreakpointRequest> breakpoints = new ArrayList<>();
-    private Set<String> setBreakpoints = new HashSet<>();
+    private final List<BreakpointRequest> breakpoints;
+    private final Set<String> setBreakpoints;
     private boolean breakpointsSet = false;
+    private BreakpointManager breakpointManager;
 
-    public void reapplyBreakpoints() throws AbsentInformationException {
+    public ScriptableDebugger() {
+        breakpoints = new ArrayList<>();
+        setBreakpoints = new HashSet<>();
+    }
+
+    public void reapplyBreakpoints() {
         for (BreakpointRequest bpReq : breakpoints) {
             bpReq.enable();
         }
@@ -39,6 +45,7 @@ public class ScriptableDebugger {
         try {
             vm = connectAndLaunchVM();
             enableClassPrepareRequest(vm);
+            breakpointManager = new BreakpointManager(vm);
             startDebugger();
         } catch (IOException | IllegalConnectorArgumentsException | VMStartException e) {
             e.printStackTrace();
@@ -54,6 +61,10 @@ public class ScriptableDebugger {
         ClassPrepareRequest classPrepareRequest = vm.eventRequestManager().createClassPrepareRequest();
         classPrepareRequest.addClassFilter(debugClass.getName());
         classPrepareRequest.enable();
+    }
+
+    public BreakpointManager getBreakpointManager() {
+        return breakpointManager;
     }
 
     public void setBreakpoint(String className, int lineNumber) {
@@ -144,6 +155,7 @@ public class ScriptableDebugger {
 
     public void startDebugger() throws VMDisconnectedException, InterruptedException, AbsentInformationException, IncompatibleThreadStateException {
         loadBreakpointsFromFile();
+        System.out.println(breakpoints.toString());
         reapplyBreakpoints();
         EventSet eventSet;
         while ((eventSet = vm.eventQueue().remove()) != null) {
@@ -178,7 +190,7 @@ public class ScriptableDebugger {
         }
     }
 
-    private void waitForUserInput(LocatableEvent event) throws AbsentInformationException, IncompatibleThreadStateException {
+    public void waitForUserInput(LocatableEvent event) throws AbsentInformationException, IncompatibleThreadStateException {
         CommandInterpreter interpreter = new CommandInterpreter();
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -192,132 +204,8 @@ public class ScriptableDebugger {
         }
     }
 
-    public ScriptableDebugger(VirtualMachine vm) {
-        this.vm = vm;
-    }
-
-    public void step() throws AbsentInformationException {
-        ThreadReference thread = vm.allThreads().get(0);
-        vm.eventRequestManager().deleteEventRequests(vm.eventRequestManager().stepRequests());
-        StepRequest stepRequest = vm.eventRequestManager().createStepRequest(
-                thread, StepRequest.STEP_MIN, StepRequest.STEP_INTO);
-        stepRequest.enable();
-        vm.resume();
-    }
-
-    public void stepOver() throws AbsentInformationException {
-        ThreadReference thread = vm.allThreads().get(0);
-        vm.eventRequestManager().deleteEventRequests(vm.eventRequestManager().stepRequests());
-        StepRequest stepRequest = vm.eventRequestManager().createStepRequest(
-                thread, StepRequest.STEP_LINE, StepRequest.STEP_OVER);
-        stepRequest.enable();
-        vm.resume();
-    }
-
-    public void continueExecution() {
-        try {
-            vm.resume();
-            EventSet eventSet;
-            while ((eventSet = vm.eventQueue().remove()) != null) {
-                for (Event event : eventSet) {
-                    if (event instanceof BreakpointEvent) {
-                        waitForUserInput((LocatableEvent) event);
-                        return;
-                    }
-                    vm.resume();
-                }
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (VMDisconnectedException e) {
-            System.out.println("Virtual Machine is disconnected: " + e.toString());
-        } catch (AbsentInformationException e) {
-            throw new RuntimeException(e);
-        } catch (IncompatibleThreadStateException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void printCurrentFrame() throws IncompatibleThreadStateException {
-        ThreadReference thread = vm.allThreads().get(0);
-        System.out.println(thread.frame(0));
-    }
-
-    public void printTemporaries() throws IncompatibleThreadStateException, AbsentInformationException {
-        ThreadReference thread = vm.allThreads().get(0);
-        StackFrame frame = thread.frame(0);
-        for (LocalVariable var : frame.visibleVariables()) {
-            System.out.println(var.name() + " -> " + frame.getValue(var));
-        }
-    }
-
-    public void printStack() throws IncompatibleThreadStateException {
-        ThreadReference thread = vm.allThreads().get(0);
-        for (StackFrame frame : thread.frames()) {
-            System.out.println(frame);
-        }
-    }
-
-    public void printReceiver() throws IncompatibleThreadStateException {
-        ThreadReference thread = vm.allThreads().get(0);
-        System.out.println(thread.frame(0).thisObject());
-    }
-
-    public void printSender() {
-        System.out.println("Not directly available in JDI");
-    }
-
-    public void printReceiverVariables() throws IncompatibleThreadStateException {
-        ObjectReference receiver = vm.allThreads().get(0).frame(0).thisObject();
-        for (Field field : receiver.referenceType().allFields()) {
-            System.out.println(field.name() + " -> " + receiver.getValue(field));
-        }
-    }
-
-    public void printMethod() throws IncompatibleThreadStateException {
-        System.out.println(vm.allThreads().get(0).frame(0).location().method());
-    }
-
-    public void printArguments() throws IncompatibleThreadStateException, AbsentInformationException {
-        StackFrame frame = vm.allThreads().get(0).frame(0);
-        for (LocalVariable var : frame.visibleVariables()) {
-            if (var.isArgument()) {
-                System.out.println(var.name() + " -> " + frame.getValue(var));
-            }
-        }
-    }
-
-    public void printVariable(String varName) throws IncompatibleThreadStateException, AbsentInformationException {
-        StackFrame frame = vm.allThreads().get(0).frame(0);
-        LocalVariable var = frame.visibleVariableByName(varName);
-        System.out.println(var.name() + " -> " + frame.getValue(var));
-    }
-
-    public void listBreakpoints() {
-        for (BreakpointRequest bpReq : breakpoints) {
-            Location location = bpReq.location();
-            System.out.println("Breakpoint at " + location.declaringType().name() + ":" + location.lineNumber());
-        }
-    }
-
-    public void setOneTimeBreakpoint() throws AbsentInformationException {
-        setBreakpoint("com.ubo.debug.JDISimpleDebuggee", 10); // Example arguments
-        // Additional logic to remove after one hit
-    }
-
-    public void setConditionalBreakpoint() throws AbsentInformationException {
-        setBreakpoint("com.ubo.debug.JDISimpleDebuggee", 10); // Example arguments
-        System.out.print("Enter hit count before activation: ");
-        Scanner scanner = new Scanner(System.in);
-        int count = scanner.nextInt();
-        // Additional logic to activate after a certain number of hits
-    }
-
-    public void setMethodCallBreakpoint() {
-        System.out.print("Enter method name: ");
-        Scanner scanner = new Scanner(System.in);
-        String methodName = scanner.nextLine().trim();
-        System.out.println("Not natively supported by JDI");
+    public VirtualMachine getVm() {
+        return vm;
     }
 
     public void startCommandInterpreter() throws AbsentInformationException, IncompatibleThreadStateException {
