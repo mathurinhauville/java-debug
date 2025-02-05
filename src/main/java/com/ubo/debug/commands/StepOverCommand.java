@@ -8,9 +8,9 @@ import com.ubo.debug.ScriptableDebugger;
 
 public class StepOverCommand implements DebuggerCommand {
     public void execute(ScriptableDebugger debugger) throws AbsentInformationException {
-        //debugger.stepOver();
         VirtualMachine vm = debugger.getVm();
         ThreadReference thread = vm.allThreads().getFirst();
+
         vm.eventRequestManager().deleteEventRequests(vm.eventRequestManager().stepRequests());
         StepRequest stepRequest = vm.eventRequestManager().createStepRequest(
                 thread, StepRequest.STEP_LINE, StepRequest.STEP_OVER);

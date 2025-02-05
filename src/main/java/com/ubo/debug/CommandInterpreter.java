@@ -40,7 +40,6 @@ public class CommandInterpreter {
     }
 
     public static void main(String[] args) throws Exception {
-        VirtualMachine vm = DebuggerLauncher.launchVM("com.ubo.debug.JDISimpleDebuggee");
         ScriptableDebugger debugger = new ScriptableDebugger();
         CommandInterpreter interpreter = new CommandInterpreter();
 

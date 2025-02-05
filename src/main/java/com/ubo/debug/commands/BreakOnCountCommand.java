@@ -8,11 +8,11 @@ import java.util.Scanner;
 
 public class BreakOnCountCommand implements DebuggerCommand {
     public void execute(ScriptableDebugger debugger) throws AbsentInformationException {
-        //debugger.setConditionalBreakpoint();
         BreakpointManager breakpointManager = debugger.getBreakpointManager();
-        breakpointManager.setBreakpoint("com.ubo.debug.JDISimpleDebuggee", 10); // Example arguments
+
+        breakpointManager.setBreakpoint("com.ubo.debug.JDISimpleDebuggee", 10);
         System.out.print("Enter hit count before activation: ");
         Scanner scanner = new Scanner(System.in);
-        int count = scanner.nextInt();
+        scanner.nextInt();
     }
 }

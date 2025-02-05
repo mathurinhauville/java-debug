@@ -12,8 +12,8 @@ import com.ubo.debug.ScriptableDebugger;
 
 public class ContinueCommand implements DebuggerCommand {
     public void execute(ScriptableDebugger debugger) {
-        //debugger.continueExecution();
         VirtualMachine vm = debugger.getVm();
+
         try {
             vm.resume();
             EventSet eventSet;
@@ -29,7 +29,7 @@ public class ContinueCommand implements DebuggerCommand {
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (VMDisconnectedException e) {
-            System.out.println("Virtual Machine is disconnected: " + e.toString());
+            System.out.println("Virtual Machine is disconnected: " + e);
         } catch (AbsentInformationException e) {
             throw new RuntimeException(e);
         } catch (IncompatibleThreadStateException e) {
