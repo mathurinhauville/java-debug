@@ -6,12 +6,9 @@ import com.sun.jdi.connect.IllegalConnectorArgumentsException;
 import com.sun.jdi.connect.LaunchingConnector;
 import com.sun.jdi.connect.VMStartException;
 import com.sun.jdi.event.*;
-import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -19,16 +16,7 @@ public class ScriptableDebugger {
 
     private Class debugClass;
     private VirtualMachine vm;
-    private final List<BreakpointRequest> breakpoints;
     private BreakpointManager breakpointManager;
-    private CommandInterpreter interpreter;
-    private Scanner scanner;
-
-    public ScriptableDebugger() {
-        breakpoints = new ArrayList<>();
-        interpreter = new CommandInterpreter();
-        scanner = new Scanner(System.in);
-    }
 
     public VirtualMachine connectAndLaunchVM() throws IOException, IllegalConnectorArgumentsException, VMStartException {
         LaunchingConnector launchingConnector = Bootstrap.virtualMachineManager().defaultConnector();
@@ -90,15 +78,18 @@ public class ScriptableDebugger {
     }
 
     /**
-     * Start the command interpreter for the user to interact with the debugger
-     *
-     * @throws AbsentInformationException       if the information about the source code is not available
-     * @throws IncompatibleThreadStateException if the thread is not in the expected state
+     * Lance l'interpréteur de commandes.
+     * L'interpréteur lit les commandes saisies par l'utilisateur et les exécute.
+     * L'interpréteur s'arrête lorsque l'utilisateur saisit la commande "exit".
      */
     public void startCommandInterpreter() throws AbsentInformationException, IncompatibleThreadStateException {
         while (true) {
+            Scanner scanner = new Scanner(System.in);
+            CommandInterpreter interpreter = new CommandInterpreter();
+
             System.out.print("debugger> ");
             String command = scanner.nextLine().trim();
+            if (command.equals("exit")) break;
             interpreter.executeCommand(command, this);
         }
     }
