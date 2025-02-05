@@ -3,18 +3,22 @@ package com.ubo.debug.commands;
 import com.sun.jdi.*;
 import com.ubo.debug.ScriptableDebugger;
 
+/**
+ * Renvoie l'objet qui a appelé la méthode actuelle.
+ */
 public class SenderCommand implements DebuggerCommand {
+
+    @Override
     public void execute(ScriptableDebugger debugger) throws IncompatibleThreadStateException {
         VirtualMachine vm = debugger.getVm();
-        ThreadReference thread = vm.allThreads().get(0);
+        ThreadReference thread = vm.allThreads().getFirst();
 
         if (thread.isSuspended()) {
             try {
-                // Récupérer la frame actuelle et la frame appelante
-                StackFrame currentFrame = thread.frame(0);
+                // Récupère la frame appelante
                 StackFrame callingFrame = thread.frame(1);
 
-                // Récupérer l'objet 'this' de la frame appelante
+                // Récupère l'objet appelant
                 ObjectReference senderObject = callingFrame.thisObject();
                 if (senderObject != null) {
                     System.out.println("Objet appelant: " + senderObject);

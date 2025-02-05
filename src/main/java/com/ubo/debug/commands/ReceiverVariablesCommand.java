@@ -5,17 +5,27 @@ import com.ubo.debug.ScriptableDebugger;
 
 import java.util.List;
 
+/**
+ * Renvoie et imprime la liste des variables d’instance du
+ * receveur courant, sous la forme d’un couple nom → valeur.
+ */
 public class ReceiverVariablesCommand implements DebuggerCommand {
+
+    @Override
     public void execute(ScriptableDebugger debugger) throws IncompatibleThreadStateException {
         VirtualMachine vm = debugger.getVm();
-        ThreadReference thread = vm.allThreads().get(0);
+        ThreadReference thread = vm.allThreads().getFirst();
 
         if (thread.isSuspended()) {
             try {
+                // Récupère la frame actuelle
                 StackFrame frame = thread.frame(0);
                 ObjectReference thisObject = frame.thisObject();
+
                 if (thisObject != null) {
                     List<Field> fields = thisObject.referenceType().allFields();
+
+                    // Parcourt les variables d'instance du receveur
                     for (Field field : fields) {
                         Value value = thisObject.getValue(field);
                         System.out.println(field.name() + " = " + value);

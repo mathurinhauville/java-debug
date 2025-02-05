@@ -7,7 +7,7 @@ import com.ubo.debug.ScriptableDebugger;
 public class ContinueCommand implements DebuggerCommand {
     public void execute(ScriptableDebugger debugger) {
         VirtualMachine vm = debugger.getVm();
-        ThreadReference thread = vm.allThreads().get(0);
+        ThreadReference thread = vm.allThreads().getFirst();
         StepCommand stepCommand = new StepCommand();
 
         try {

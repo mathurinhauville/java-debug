@@ -8,15 +8,12 @@ import com.sun.jdi.connect.VMStartException;
 import com.sun.jdi.event.*;
 import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
-import com.sun.jdi.request.StepRequest;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
-import java.util.HashSet;
 
 public class ScriptableDebugger {
 
@@ -24,15 +21,13 @@ public class ScriptableDebugger {
     private VirtualMachine vm;
     private final List<BreakpointRequest> breakpoints;
     private BreakpointManager breakpointManager;
+    private CommandInterpreter interpreter;
+    private Scanner scanner;
 
     public ScriptableDebugger() {
         breakpoints = new ArrayList<>();
-    }
-
-    public void reapplyBreakpoints() {
-        for (BreakpointRequest bpReq : breakpoints) {
-            bpReq.enable();
-        }
+        interpreter = new CommandInterpreter();
+        scanner = new Scanner(System.in);
     }
 
     public VirtualMachine connectAndLaunchVM() throws IOException, IllegalConnectorArgumentsException, VMStartException {
@@ -51,9 +46,8 @@ public class ScriptableDebugger {
             startDebugger();
         } catch (IOException | IllegalConnectorArgumentsException | VMStartException e) {
             e.printStackTrace();
-            System.out.println(e.toString());
         } catch (VMDisconnectedException e) {
-            System.out.println("Virtual Machine is disconnected: " + e.toString());
+            System.out.println("Virtual Machine is disconnected: " + e);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -65,44 +59,18 @@ public class ScriptableDebugger {
         classPrepareRequest.enable();
     }
 
-    public BreakpointManager getBreakpointManager() {
-        return breakpointManager;
-    }
-
-    public void enableStepRequest(LocatableEvent event) {
-        // Supprime les StepRequest existants pour ce thread
-        vm.eventRequestManager().deleteEventRequests(vm.eventRequestManager().stepRequests());
-
-        StepRequest stepRequest = vm.eventRequestManager()
-                .createStepRequest(event.thread(), StepRequest.STEP_MIN, StepRequest.STEP_OVER);
-        stepRequest.enable();
-    }
-
-    private void waitForUserInput(LocatableEvent event) throws AbsentInformationException, IncompatibleThreadStateException {
-        CommandInterpreter interpreter = new CommandInterpreter();
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            System.out.print("debugger> ");
-            String command = scanner.nextLine().trim();
-            if (command.equals("exit")) break;
-            interpreter.executeCommand(command, this);
-        }
-    }
-
     public void startDebugger() throws VMDisconnectedException, InterruptedException, AbsentInformationException, IncompatibleThreadStateException {
-        reapplyBreakpoints();
         EventSet eventSet;
         while ((eventSet = vm.eventQueue().remove()) != null) {
             for (Event event : eventSet) {
                 System.out.println(event.toString());
 
                 if (event instanceof ClassPrepareEvent) {
-//                    breakpointManager.setBreakpoint(debugClass.getName(), 6);
                     breakpointManager.loadBreakpointsFromFile();
                 }
 
                 if (event instanceof BreakpointEvent || event instanceof StepEvent) {
-                    waitForUserInput((LocatableEvent) event);
+                    startCommandInterpreter();
                 }
 
                 if (event instanceof VMDisconnectEvent) {
@@ -121,18 +89,26 @@ public class ScriptableDebugger {
         }
     }
 
+    /**
+     * Start the command interpreter for the user to interact with the debugger
+     *
+     * @throws AbsentInformationException       if the information about the source code is not available
+     * @throws IncompatibleThreadStateException if the thread is not in the expected state
+     */
+    public void startCommandInterpreter() throws AbsentInformationException, IncompatibleThreadStateException {
+        while (true) {
+            System.out.print("debugger> ");
+            String command = scanner.nextLine().trim();
+            interpreter.executeCommand(command, this);
+        }
+    }
+
+    public BreakpointManager getBreakpointManager() {
+        return breakpointManager;
+    }
+
     public VirtualMachine getVm() {
         return vm;
     }
 
-    public void startCommandInterpreter() throws AbsentInformationException, IncompatibleThreadStateException {
-        CommandInterpreter interpreter = new CommandInterpreter();
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            System.out.print("debugger> ");
-            String command = scanner.nextLine().trim();
-            if (command.equals("exit")) break;
-            interpreter.executeCommand(command, this);
-        }
-    }
 }

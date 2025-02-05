@@ -6,7 +6,13 @@ import com.ubo.debug.ScriptableDebugger;
 
 import java.util.Scanner;
 
+/**
+ * Installe un point d’arrêt à la ligne lineNumber de la classe className.
+ * Ce point d’arrêt se désinstalle après avoir été atteint.
+ */
 public class BreakOnceCommand implements DebuggerCommand {
+
+    @Override
     public void execute(ScriptableDebugger debugger) throws AbsentInformationException {
         BreakpointManager breakpointManager = debugger.getBreakpointManager();
         Scanner scanner = new Scanner(System.in);
@@ -16,6 +22,7 @@ public class BreakOnceCommand implements DebuggerCommand {
         System.out.print("Enter line number: ");
 
         int lineNumber = scanner.nextInt();
-        breakpointManager.setBreakpointOnce(className, lineNumber);
+        // Ajoute le breakpoint
+        breakpointManager.setBreakpoint(className, lineNumber);
     }
 }

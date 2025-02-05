@@ -6,7 +6,13 @@ import com.sun.jdi.VirtualMachine;
 import com.sun.jdi.request.StepRequest;
 import com.ubo.debug.ScriptableDebugger;
 
+/**
+ * Execute la prochaine instruction. S’il s’agit d’un appel de méthode,
+ * l’exécution entre dans cette dernière.
+ */
 public class StepCommand implements DebuggerCommand {
+
+    @Override
     public void execute(ScriptableDebugger debugger) throws AbsentInformationException {
         VirtualMachine vm = debugger.getVm();
         ThreadReference thread = vm.allThreads().getFirst();

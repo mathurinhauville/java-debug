@@ -7,13 +7,19 @@ import com.ubo.debug.ScriptableDebugger;
 
 import java.util.Scanner;
 
+/**
+ * Affiche la valeur d’une variable saisie par l’utilisateur.
+ */
 public class PrintVarCommand implements DebuggerCommand {
+
+    @Override
     public void execute(ScriptableDebugger debugger) {
         VirtualMachine vm = debugger.getVm();
 
         System.out.print("Enter variable name: ");
         Scanner scanner = new Scanner(System.in);
         String varName = scanner.nextLine().trim();
+
         try {
             StackFrame frame = vm.allThreads().getFirst().frame(0);
             LocalVariable var = frame.visibleVariableByName(varName);

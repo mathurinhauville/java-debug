@@ -6,6 +6,9 @@ import com.ubo.debug.commands.*;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Interprète les commandes saisies par l'utilisateur.
+ */
 public class CommandInterpreter {
     private final Map<String, DebuggerCommand> commands = new HashMap<>();
 
@@ -29,6 +32,15 @@ public class CommandInterpreter {
         commands.put("break-before-method-call", new BreakBeforeMethodCallCommand());
     }
 
+    /**
+     * Exécute la commande spécifiée.
+     * Si la commande est inconnue, affiche un message d'erreur.
+     *
+     * @param command  la commande à exécuter
+     * @param debugger le débogueur
+     * @throws AbsentInformationException       si une information est absente
+     * @throws IncompatibleThreadStateException si l'état du thread est incompatible
+     */
     public void executeCommand(String command, ScriptableDebugger debugger) throws AbsentInformationException, IncompatibleThreadStateException {
         DebuggerCommand cmd = commands.get(command);
         if (cmd != null) {
