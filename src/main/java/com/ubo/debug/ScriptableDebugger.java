@@ -10,18 +10,22 @@ import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
 import com.sun.jdi.request.StepRequest;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.util.Map;
-import java.util.Scanner;
+import java.io.*;
+import java.util.*;
 
 public class ScriptableDebugger {
 
-    private Class debugClass;
+    private Class<?> debugClass;
     private VirtualMachine vm;
-    private boolean autoStepping = false;
+    private List<BreakpointRequest> breakpoints = new ArrayList<>();
+    private Set<String> setBreakpoints = new HashSet<>();
+    private boolean breakpointsSet = false;
+
+    public void reapplyBreakpoints() throws AbsentInformationException {
+        for (BreakpointRequest bpReq : breakpoints) {
+            bpReq.enable();
+        }
+    }
 
     public VirtualMachine connectAndLaunchVM() throws IOException, IllegalConnectorArgumentsException, VMStartException {
         LaunchingConnector launchingConnector = Bootstrap.virtualMachineManager().defaultConnector();
@@ -30,7 +34,7 @@ public class ScriptableDebugger {
         return launchingConnector.launch(arguments);
     }
 
-    public void attachTo(Class debuggeeClass) {
+    public void attachTo(Class<?> debuggeeClass) {
         this.debugClass = debuggeeClass;
         try {
             vm = connectAndLaunchVM();
@@ -52,60 +56,110 @@ public class ScriptableDebugger {
         classPrepareRequest.enable();
     }
 
-    public void setBreakPoint(String className, int lineNumber) throws AbsentInformationException {
+    public void setBreakpoint(String className, int lineNumber) {
+        String breakpointKey = className + ":" + lineNumber;
+        if (setBreakpoints.contains(breakpointKey)) {
+            return;
+        }
+
+        boolean classFound = false;
         for (ReferenceType targetClass : vm.allClasses()) {
             if (targetClass.name().equals(className)) {
-                Location location = targetClass.locationsOfLine(lineNumber).get(0);
-                BreakpointRequest bpReq = vm.eventRequestManager().createBreakpointRequest(location);
-                bpReq.enable();
+                classFound = true;
+                try {
+                    List<Location> locations = targetClass.locationsOfLine(lineNumber);
+                    if (locations.isEmpty()) {
+                        System.out.println("No locations found for line: " + lineNumber);
+                        return;
+                    }
+                    Location location = locations.get(0);
+                    BreakpointRequest bpReq = vm.eventRequestManager().createBreakpointRequest(location);
+                    bpReq.enable();
+                    breakpoints.add(bpReq);
+                    setBreakpoints.add(breakpointKey);
+                    System.out.println("Breakpoint set at " + targetClass.sourceName() + ":" + lineNumber);
+                    saveBreakpointToFile(className, lineNumber);
+                } catch (AbsentInformationException e) {
+                    e.printStackTrace();
+                }
+                return;
             }
+        }
+        if (!classFound) {
+            ClassPrepareRequest classPrepareRequest = vm.eventRequestManager().createClassPrepareRequest();
+            classPrepareRequest.addClassFilter(className);
+            classPrepareRequest.enable();
         }
     }
 
-    public void enableStepRequest(LocatableEvent event) {
-        // Supprime les StepRequest existants pour ce thread
-        vm.eventRequestManager().deleteEventRequests(vm.eventRequestManager().stepRequests());
+    private void saveBreakpointToFile(String className, int lineNumber) {
+        String breakpoint = className + ":" + lineNumber;
+        try (BufferedReader reader = new BufferedReader(new FileReader("breakpoints.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().equals(breakpoint)) {
+                    return;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        StepRequest stepRequest = vm.eventRequestManager()
-                .createStepRequest(event.thread(), StepRequest.STEP_MIN, StepRequest.STEP_OVER);
-        stepRequest.enable();
+        try (FileWriter writer = new FileWriter("breakpoints.txt", true)) {
+            writer.write(breakpoint + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void waitForUserInput(LocatableEvent event) {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("Debugger paused. Type 'step' to continue stepping, or press Enter to auto-step until the end.");
-        try {
-            String input = reader.readLine();
-            if ("step".equalsIgnoreCase(input)) {
-                autoStepping = false;
-                enableStepRequest(event);
-            } else {
-                autoStepping = true;
-                enableStepRequest(event);
+    private void loadBreakpointsFromFile() {
+        File file = new File("breakpoints.txt");
+        if (!file.exists()) {
+            System.out.println("No breakpoints file found.");
+            return;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(":");
+                if (parts.length != 2) {
+                    System.out.println("Invalid breakpoint format: " + line);
+                    continue;
+                }
+                String className = parts[0];
+                int lineNumber;
+                try {
+                    lineNumber = Integer.parseInt(parts[1]);
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid line number: " + parts[1]);
+                    continue;
+                }
+                setBreakpoint(className, lineNumber);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-
-
-    public void startDebugger() throws VMDisconnectedException, InterruptedException, AbsentInformationException {
+    public void startDebugger() throws VMDisconnectedException, InterruptedException, AbsentInformationException, IncompatibleThreadStateException {
+        loadBreakpointsFromFile();
+        reapplyBreakpoints();
         EventSet eventSet;
         while ((eventSet = vm.eventQueue().remove()) != null) {
             for (Event event : eventSet) {
                 System.out.println(event.toString());
 
                 if (event instanceof ClassPrepareEvent) {
-                    setBreakPoint(debugClass.getName(), 6);
+                    ClassPrepareEvent classPrepareEvent = (ClassPrepareEvent) event;
+                    if (classPrepareEvent.referenceType().name().equals(debugClass.getName()) && !breakpointsSet) {
+                        setBreakpoint(debugClass.getName(), 6);
+                        breakpointsSet = true;
+                    }
                 }
 
                 if (event instanceof BreakpointEvent || event instanceof StepEvent) {
-                    if (!autoStepping) {
-                        waitForUserInput((LocatableEvent) event);
-                    } else {
-                        enableStepRequest((LocatableEvent) event);
-                    }
+                    waitForUserInput((LocatableEvent) event);
                 }
 
                 if (event instanceof VMDisconnectEvent) {
@@ -124,12 +178,27 @@ public class ScriptableDebugger {
         }
     }
 
+    private void waitForUserInput(LocatableEvent event) throws AbsentInformationException, IncompatibleThreadStateException {
+        CommandInterpreter interpreter = new CommandInterpreter();
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.print("debugger> ");
+            String command = scanner.nextLine().trim();
+            if (command.equals("continue")) {
+                vm.resume();
+                break;
+            }
+            interpreter.executeCommand(command, this);
+        }
+    }
+
     public ScriptableDebugger(VirtualMachine vm) {
         this.vm = vm;
     }
 
     public void step() throws AbsentInformationException {
         ThreadReference thread = vm.allThreads().get(0);
+        vm.eventRequestManager().deleteEventRequests(vm.eventRequestManager().stepRequests());
         StepRequest stepRequest = vm.eventRequestManager().createStepRequest(
                 thread, StepRequest.STEP_MIN, StepRequest.STEP_INTO);
         stepRequest.enable();
@@ -138,6 +207,7 @@ public class ScriptableDebugger {
 
     public void stepOver() throws AbsentInformationException {
         ThreadReference thread = vm.allThreads().get(0);
+        vm.eventRequestManager().deleteEventRequests(vm.eventRequestManager().stepRequests());
         StepRequest stepRequest = vm.eventRequestManager().createStepRequest(
                 thread, StepRequest.STEP_LINE, StepRequest.STEP_OVER);
         stepRequest.enable();
@@ -145,7 +215,27 @@ public class ScriptableDebugger {
     }
 
     public void continueExecution() {
-        vm.resume();
+        try {
+            vm.resume();
+            EventSet eventSet;
+            while ((eventSet = vm.eventQueue().remove()) != null) {
+                for (Event event : eventSet) {
+                    if (event instanceof BreakpointEvent) {
+                        waitForUserInput((LocatableEvent) event);
+                        return;
+                    }
+                    vm.resume();
+                }
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (VMDisconnectedException e) {
+            System.out.println("Virtual Machine is disconnected: " + e.toString());
+        } catch (AbsentInformationException e) {
+            throw new RuntimeException(e);
+        } catch (IncompatibleThreadStateException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void printCurrentFrame() throws IncompatibleThreadStateException {
@@ -203,36 +293,24 @@ public class ScriptableDebugger {
         System.out.println(var.name() + " -> " + frame.getValue(var));
     }
 
-    public void setBreakpoint() throws AbsentInformationException {
-        System.out.print("Enter class name: ");
-        Scanner scanner = new Scanner(System.in);
-        String className = scanner.nextLine().trim();
-        System.out.print("Enter line number: ");
-        int lineNumber = scanner.nextInt();
-        for (ReferenceType targetClass : vm.allClasses()) {
-            if (targetClass.name().equals(className)) {
-                Location location = targetClass.locationsOfLine(lineNumber).get(0);
-                BreakpointRequest bpReq = vm.eventRequestManager().createBreakpointRequest(location);
-                bpReq.enable();
-            }
+    public void listBreakpoints() {
+        for (BreakpointRequest bpReq : breakpoints) {
+            Location location = bpReq.location();
+            System.out.println("Breakpoint at " + location.declaringType().name() + ":" + location.lineNumber());
         }
     }
 
-    public void listBreakpoints() {
-        System.out.println("Breakpoints are not directly retrievable in JDI");
-    }
-
     public void setOneTimeBreakpoint() throws AbsentInformationException {
-        setBreakpoint();
-        // Logique supplémentaire pour supprimer après une activation
+        setBreakpoint("com.ubo.debug.JDISimpleDebuggee", 10); // Example arguments
+        // Additional logic to remove after one hit
     }
 
     public void setConditionalBreakpoint() throws AbsentInformationException {
-        setBreakpoint();
+        setBreakpoint("com.ubo.debug.JDISimpleDebuggee", 10); // Example arguments
         System.out.print("Enter hit count before activation: ");
         Scanner scanner = new Scanner(System.in);
         int count = scanner.nextInt();
-        // Logique supplémentaire pour l'activer après un certain nombre d'atteintes
+        // Additional logic to activate after a certain number of hits
     }
 
     public void setMethodCallBreakpoint() {
@@ -240,5 +318,16 @@ public class ScriptableDebugger {
         Scanner scanner = new Scanner(System.in);
         String methodName = scanner.nextLine().trim();
         System.out.println("Not natively supported by JDI");
+    }
+
+    public void startCommandInterpreter() throws AbsentInformationException, IncompatibleThreadStateException {
+        CommandInterpreter interpreter = new CommandInterpreter();
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.print("debugger> ");
+            String command = scanner.nextLine().trim();
+            if (command.equals("exit")) break;
+            interpreter.executeCommand(command, this);
+        }
     }
 }

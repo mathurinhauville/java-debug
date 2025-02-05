@@ -7,7 +7,7 @@ public class JDISimpleDebugger {
         VirtualMachine vm = DebuggerLauncher.launchVM("com.ubo.debug.JDISimpleDebuggee");
         ScriptableDebugger debuggerInstance = new ScriptableDebugger(vm);
         debuggerInstance.attachTo(JDISimpleDebuggee.class);
-
+        debuggerInstance.startCommandInterpreter();
     }
 }
 
