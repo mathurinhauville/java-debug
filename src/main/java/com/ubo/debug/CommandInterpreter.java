@@ -5,7 +5,6 @@ import com.ubo.debug.commands.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
 public class CommandInterpreter {
     private final Map<String, DebuggerCommand> commands = new HashMap<>();
@@ -36,19 +35,6 @@ public class CommandInterpreter {
             cmd.execute(debugger);
         } else {
             System.out.println("Commande inconnue : " + command);
-        }
-    }
-
-    public static void main(String[] args) throws Exception {
-        ScriptableDebugger debugger = new ScriptableDebugger();
-        CommandInterpreter interpreter = new CommandInterpreter();
-
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            System.out.print("debugger> ");
-            String command = scanner.nextLine().trim();
-            if (command.equals("exit")) break;
-            interpreter.executeCommand(command, debugger);
         }
     }
 }
