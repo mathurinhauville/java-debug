@@ -90,7 +90,6 @@ public class ScriptableDebugger {
     }
 
     public void startDebugger() throws VMDisconnectedException, InterruptedException, AbsentInformationException, IncompatibleThreadStateException {
-        breakpointManager.loadBreakpointsFromFile();
         reapplyBreakpoints();
         EventSet eventSet;
         while ((eventSet = vm.eventQueue().remove()) != null) {
@@ -99,6 +98,7 @@ public class ScriptableDebugger {
 
                 if (event instanceof ClassPrepareEvent) {
                     breakpointManager.setBreakpoint(debugClass.getName(), 6);
+                    breakpointManager.loadBreakpointsFromFile();
                 }
 
                 if (event instanceof BreakpointEvent || event instanceof StepEvent) {
