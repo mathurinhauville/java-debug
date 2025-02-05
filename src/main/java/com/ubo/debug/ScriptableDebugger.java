@@ -53,14 +53,17 @@ public class ScriptableDebugger {
             for (Event event : eventSet) {
                 System.out.println(event.toString());
 
+                // Si l'événement est un ClassPrepareEvent, on charge les points d'arrêt depuis le fichier
                 if (event instanceof ClassPrepareEvent) {
                     breakpointManager.loadBreakpointsFromFile();
                 }
 
+                // Si l'événement est un BreakpointEvent ou un StepEvent, on lance l'interpréteur de commandes
                 if (event instanceof BreakpointEvent || event instanceof StepEvent) {
                     startCommandInterpreter();
                 }
 
+                // Si l'événement est un VMDisconnectEvent, on affiche la sortie de la VM cible
                 if (event instanceof VMDisconnectEvent) {
                     System.out.println("End of program");
                     InputStreamReader reader = new InputStreamReader(vm.process().getInputStream());
