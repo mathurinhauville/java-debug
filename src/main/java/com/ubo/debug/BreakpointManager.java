@@ -129,9 +129,14 @@ public class BreakpointManager {
 
         // Vérifie si le fichier de points d'arrêt existe
         if (!file.exists()) {
-            System.out.println("No breakpoints file found.");
+            System.out.println(BREAKPOINTS_FILE + " file not found.");
+            System.out.println("Create a breakpoints.txt file inside target/classes directory.");
+            System.out.println("Add a breakpoint in the format: ClassName:LineNumber");
+            System.out.println("Example: com.ubo.debug.JDISimpleDebuggee:8");
             return;
         }
+
+        System.out.println("Load breakpoints from " + BREAKPOINTS_FILE);
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
