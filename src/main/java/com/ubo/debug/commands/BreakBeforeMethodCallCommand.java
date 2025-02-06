@@ -37,6 +37,7 @@ public class BreakBeforeMethodCallCommand implements DebuggerCommand {
                         if (!locations.isEmpty()) {
                             Location methodStart = locations.getFirst();
                             breakpointManager.setBreakpoint(referenceType.name(), methodStart.lineNumber());
+                            breakpointManager.saveBreakpointToFile(referenceType.name(), methodStart.lineNumber());
                             System.out.println("Breakpoint set at " + referenceType.name() + ":" + methodStart.lineNumber());
                             breakpointSet = true;
                             break;
