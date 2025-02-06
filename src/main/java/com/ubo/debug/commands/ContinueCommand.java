@@ -5,6 +5,8 @@ import com.sun.jdi.event.*;
 import com.ubo.debug.ScriptableDebugger;
 
 public class ContinueCommand implements DebuggerCommand {
+
+    @Override
     public void execute(ScriptableDebugger debugger) {
         VirtualMachine vm = debugger.getVm();
         ThreadReference thread = vm.allThreads().getFirst();
