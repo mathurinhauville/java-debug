@@ -44,3 +44,22 @@ l'utilisateur pour déclencher la commande en question.
 
 La classe [BreakpointManager](src/main/java/com/ubo/debug/BreakpointManager.java) permet de gérer les breakpoints. Elle
 contient l'ensemble des méthodes relatives à la gestion des breakpoints.
+
+## Commandes
+
+### step-back
+
+- Demande à l'utilisateur un nombre de pas à revenir en arrière.
+- Sauvegarde la valeur du PC actuel.
+- Redémarre la vm.
+- Enregistre le PC avec la valeur sauvegardée moins le nombre de pas à revenir en arrière.
+- La méthode `initStepWithPC()` de la classe [ScriptableDebugger](src/main/java/com/ubo/debug/ScriptableDebugger.java)
+  exécute la commande `step` pour revenir à la position souhaitée.
+
+### step-back-one
+
+Commande `step-back` avec un pas en arrière.
+
+### pc
+
+Affiche la valeur du PC actuel.

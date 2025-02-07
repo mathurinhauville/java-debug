@@ -120,7 +120,6 @@ public class BreakpointManager {
         }
     }
 
-
     /**
      * Charge les points d'arrêt depuis un fichier
      */
@@ -167,6 +166,10 @@ public class BreakpointManager {
         } catch (AbsentInformationException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public List<BreakpointRequest> getBreakpoints() {
+        return breakpoints;
     }
 
 }
