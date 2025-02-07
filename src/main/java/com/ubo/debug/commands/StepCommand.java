@@ -26,6 +26,7 @@ public class StepCommand implements DebuggerCommand {
                 thread, StepRequest.STEP_MIN, StepRequest.STEP_INTO);
         stepRequest.enable();
 
+        // Incrémente le PC
         debugger.setPC(debugger.getPC() + 1);
         vm.resume();
     }

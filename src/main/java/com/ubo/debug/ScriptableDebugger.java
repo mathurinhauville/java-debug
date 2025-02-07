@@ -107,12 +107,13 @@ public class ScriptableDebugger {
      * Initialise les steps avec le PC
      */
     private void initStepWithPC() throws AbsentInformationException, IncompatibleThreadStateException {
-        // on place une variable temporaire pour pc car la commande step elle même incrémente pc donc on serait dans une boucle infinie
+        // on place une variable temporaire pour pc
+        // car la commande step elle-même incrémente pc donc on serait dans une boucle infinie
         int tmpPC = this.PC;
         // on remet pc à 0 car il va être incrémenté par les méthodes step
         PC = 0;
 
-        for (int i = 0; i < (tmpPC); i++) {
+        for (int i = 0; i < tmpPC; i++) {
             System.out.println("step");
             interpreter.executeCommand("step", this);
         }
