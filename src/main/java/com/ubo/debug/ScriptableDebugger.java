@@ -6,7 +6,6 @@ import com.sun.jdi.connect.IllegalConnectorArgumentsException;
 import com.sun.jdi.connect.LaunchingConnector;
 import com.sun.jdi.connect.VMStartException;
 import com.sun.jdi.event.*;
-import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.ClassPrepareRequest;
 
 import java.io.*;
@@ -18,7 +17,7 @@ public class ScriptableDebugger {
     private Class debugClass;
     private VirtualMachine vm;
     private BreakpointManager breakpointManager;
-    private CommandInterpreter interpreter = new CommandInterpreter();
+    private final CommandInterpreter interpreter = new CommandInterpreter();
     private int PC = 0;
 
     public VirtualMachine connectAndLaunchVM() throws IOException, IllegalConnectorArgumentsException, VMStartException {
@@ -84,7 +83,6 @@ public class ScriptableDebugger {
         }
     }
 
-
     /**
      * Lance l'interpréteur de commandes.
      * L'interpréteur lit les commandes saisies par l'utilisateur et les exécute.
@@ -142,4 +140,5 @@ public class ScriptableDebugger {
     public Class getDebugClass() {
         return debugClass;
     }
+
 }

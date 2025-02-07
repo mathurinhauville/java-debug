@@ -52,4 +52,5 @@ public class CommandInterpreter {
             System.out.println("Commande inconnue : " + command);
         }
     }
+
 }
