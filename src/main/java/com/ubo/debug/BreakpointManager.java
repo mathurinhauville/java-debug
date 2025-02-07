@@ -16,12 +16,10 @@ public class BreakpointManager {
 
     private final VirtualMachine vm;
     private final List<BreakpointRequest> breakpoints;
-    private final List<BreakpointRequest> removedBreakpoints;
 
     public BreakpointManager(VirtualMachine vm) {
         this.vm = vm;
         this.breakpoints = new ArrayList<>();
-        this.removedBreakpoints = new ArrayList<>();
     }
 
     /**
@@ -123,7 +121,6 @@ public class BreakpointManager {
         }
     }
 
-
     /**
      * Charge les points d'arrêt depuis un fichier
      */
@@ -176,27 +173,4 @@ public class BreakpointManager {
         return breakpoints;
     }
 
-    public void removeBreakpoints() {
-        EventRequestManager manager = vm.eventRequestManager();
-
-        removedBreakpoints.clear();
-
-        for (BreakpointRequest bpReq : breakpoints) {
-            bpReq.disable();
-            manager.deleteEventRequest(bpReq);
-            removedBreakpoints.add(bpReq);  // Sauvegarde des breakpoints supprimés
-        }
-        breakpoints.clear();
-    }
-
-    public void rollbackBreakpoints() {
-        EventRequestManager manager = vm.eventRequestManager();
-
-        for (BreakpointRequest bpReq : removedBreakpoints) {
-            bpReq.enable();
-            breakpoints.add(bpReq);
-        }
-
-        removedBreakpoints.clear(); // Une fois restaurés, on vide la liste
-    }
 }
