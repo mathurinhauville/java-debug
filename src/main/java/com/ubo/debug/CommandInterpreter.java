@@ -30,6 +30,9 @@ public class CommandInterpreter {
         commands.put("break-once", new BreakOnceCommand());
         commands.put("break-on-count", new BreakOnCountCommand());
         commands.put("break-before-method-call", new BreakBeforeMethodCallCommand());
+        commands.put("step-back-one", new StepBackOneCommand());
+        commands.put("step-back", new StepBackCommand());
+        commands.put("pc", new PcCommand());
     }
 
     /**
@@ -49,4 +52,5 @@ public class CommandInterpreter {
             System.out.println("Commande inconnue : " + command);
         }
     }
+
 }

@@ -17,6 +17,8 @@ public class ScriptableDebugger {
     private Class debugClass;
     private VirtualMachine vm;
     private BreakpointManager breakpointManager;
+    private final CommandInterpreter interpreter = new CommandInterpreter();
+    private int PC = 0;
 
     public VirtualMachine connectAndLaunchVM() throws IOException, IllegalConnectorArgumentsException, VMStartException {
         LaunchingConnector launchingConnector = Bootstrap.virtualMachineManager().defaultConnector();
@@ -40,6 +42,7 @@ public class ScriptableDebugger {
             e.printStackTrace();
         }
     }
+
 
     public void enableClassPrepareRequest(VirtualMachine vm) {
         ClassPrepareRequest classPrepareRequest = vm.eventRequestManager().createClassPrepareRequest();
@@ -85,15 +88,32 @@ public class ScriptableDebugger {
      * L'interpréteur lit les commandes saisies par l'utilisateur et les exécute.
      * L'interpréteur s'arrête lorsque l'utilisateur saisit la commande "exit".
      */
-    public void startCommandInterpreter() throws AbsentInformationException, IncompatibleThreadStateException {
+    public void startCommandInterpreter() throws AbsentInformationException, IncompatibleThreadStateException, InterruptedException {
+        // on initialise les steps
+        initStepWithPC();
+
         while (true) {
             Scanner scanner = new Scanner(System.in);
-            CommandInterpreter interpreter = new CommandInterpreter();
-
             System.out.print("debugger> ");
             String command = scanner.nextLine().trim();
             if (command.equals("exit")) break;
             interpreter.executeCommand(command, this);
+        }
+    }
+
+    /**
+     * Initialise les steps avec le PC
+     */
+    private void initStepWithPC() throws AbsentInformationException, IncompatibleThreadStateException {
+        // on place une variable temporaire pour pc
+        // car la commande step elle-même incrémente pc donc on serait dans une boucle infinie
+        int tmpPC = this.PC;
+        // on remet pc à 0 car il va être incrémenté par les méthodes step
+        PC = 0;
+
+        for (int i = 0; i < tmpPC; i++) {
+            System.out.println("step");
+            interpreter.executeCommand("step", this);
         }
     }
 
@@ -103,6 +123,22 @@ public class ScriptableDebugger {
 
     public VirtualMachine getVm() {
         return vm;
+    }
+
+    public CommandInterpreter getInterpreter() {
+        return interpreter;
+    }
+
+    public int getPC() {
+        return PC;
+    }
+
+    public void setPC(int PC) {
+        this.PC = PC;
+    }
+
+    public Class getDebugClass() {
+        return debugClass;
     }
 
 }
