@@ -2,7 +2,6 @@ package com.ubo.debug.commands;
 
 import com.sun.jdi.*;
 import com.ubo.debug.ScriptableDebugger;
-import com.ubo.debug.BreakpointManager;
 
 import java.util.Scanner;
 
@@ -14,8 +13,8 @@ public class StepBackCommand implements DebuggerCommand {
     @Override
     public void execute(ScriptableDebugger debugger) throws IncompatibleThreadStateException, AbsentInformationException {
         int pc = debugger.getPC();
-        BreakpointManager breakpointManager = debugger.getBreakpointManager();
 
+        // On ne peut pas reculer plus loin que le début du programme
         if (pc == 0) {
             System.out.println("Impossible de reculer plus loin");
             return;
@@ -25,6 +24,7 @@ public class StepBackCommand implements DebuggerCommand {
         System.out.print("Combien de lignes en arrière ? ");
         int stepBackCount = scanner.nextInt();
 
+        // On ne peut pas reculer plus loin que le début du programme
         if (stepBackCount <= 0 || pc - stepBackCount < 0) {
             System.out.println("Nombre invalide");
             return;
@@ -32,8 +32,13 @@ public class StepBackCommand implements DebuggerCommand {
 
         System.out.println("Re-démarrage du programme pour revenir à PC = " + (pc - stepBackCount));
 
+        // Arrête la VM
         debugger.getVm().dispose();
+
+        // Assigne la nouvelle valeur de PC
         debugger.setPC(pc - stepBackCount);
+
+        // Relance le debugger
         debugger.attachTo(debugger.getDebugClass());
     }
 }

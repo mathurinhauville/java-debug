@@ -63,3 +63,47 @@ Commande `step-back` avec un pas en arrière.
 ### pc
 
 Affiche la valeur du PC actuel.
+
+### break
+
+Ajoute un breakpoint à la ligne demandée et ajoute ce breakpoint dans le fichier breakpoints.txt pour retrouver les
+breakpoints à chaque lancement.
+
+### break-once
+
+Ajoute un breakpoint à la ligne demandée sans l'ajouter dans le fichier breakpoints.txt.
+
+### continue
+
+Continue l'exécution du programme jusqu'au prochain breakpoint. Utilise la commande `step` pour avancer jusqu'au prochain breakpoint.
+
+### step
+
+### step-over
+
+### frame
+
+### temporaries
+
+### stack
+
+### receiver
+
+### sender
+
+### receiver-variables
+
+### method
+
+### arguments
+
+### print-var
+
+### breakpoints
+
+### break-before-method-call
+
+### break-on-count
+
+N'est pas implémentée.
+
